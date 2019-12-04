@@ -4,13 +4,31 @@
 #include <arpa/inet.h> // for htons
 #include <netinet/in.h> // for sockaddr_in
 #include <sys/socket.h> // for socket
+#include <pthread.h>
 #include <string>
-
 using namespace std;
 
 void usage() {
 	printf("syntax : echo_client <host> <port>\n");
 	printf("sample : echo_client 127.0.0.1 1234\n");
+}
+
+void *t_func(void *data) {
+	int sockfd = *((int *)data);
+	
+	while(true) {
+		const static int BUFSIZE = 1024;
+		char buf[BUFSIZE];
+		
+		ssize_t received = recv(sockfd, buf, BUFSIZE - 1, 0);
+		if (received == 0 || received == -1) {
+			perror("recv failed");
+			break;
+		}
+		buf[received] = '\0';
+		printf("%s\n", buf);
+	}
+	exit(0);
 }
 
 int main(int argc, char **argv) {
@@ -38,6 +56,14 @@ int main(int argc, char **argv) {
 	}
 	printf("connected\n");
 
+	pthread_t th;
+	if(pthread_create(&th, NULL, t_func, (void *)&sockfd) < 0)
+    {
+        perror("thread create error : ");
+        return -1;
+    }
+	pthread_detach(th);
+	
 	while (true) {
 		const static int BUFSIZE = 1024;
 		char buf[BUFSIZE];
@@ -50,15 +76,7 @@ int main(int argc, char **argv) {
 			perror("send failed");
 			break;
 		}
-
-		ssize_t received = recv(sockfd, buf, BUFSIZE - 1, 0);
-		if (received == 0 || received == -1) {
-			perror("recv failed");
-			break;
-		}
-		buf[received] = '\0';
-		printf("%s\n", buf);
 	}
-
+	pthread_cancel(th);
 	close(sockfd);
 }

@@ -1,7 +1,7 @@
 all : clean echo_client_server
 
 echo_client_server: echo.o
-	g++ -g -o echo_client echo_client.o
+	g++ -g -o echo_client echo_client.o -pthread
 	g++ -g -o echo_server echo_server.o -pthread
 
 echo.o:
